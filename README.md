@@ -8,4 +8,4 @@ a área da sua zona de perigo, pois quem está na borda possui uma zona de perig
 Este projeto procura implementar uma simulação que verifique uma simplificação desse fenômeno visualmente. Os animais são 
 figuras numa grid 2D, que se movimentam e se comportam de acordo com um conjunto de regras.
 
-Implementação em Python usando a biblioteca Arcade para criação de jogos 2D.
+Implementação em Python 3.6 usando a biblioteca Arcade para criação de jogos 2D.
