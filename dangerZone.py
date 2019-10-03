@@ -16,10 +16,64 @@ def calculate_positions_of_grid(size_of_margin,width_cell,heigth_cell,num_rows,n
     return positions
 
 def check_boundaries(pos,num_rows,num_columns):
-	if(pos[0] < 0 or pos[0] > num_columns or pos[1] < 0 or pos[1] > num_rows ):
+	if(pos[0] < 0 or pos[0] > num_columns - 1 or pos[1] < 0 or pos[1] > num_rows - 1 ):
 		return True
 	return False
-	
+
+#check if a given position is occupying the space of another
+def check_colision(pos,grid):
+	pos_x = pos[0]
+	pos_y = pos[1]
+	if grid[pos_y][pos_x] == 0:
+		return False
+	else:
+		return True
+
+def populate_grid(grid,num_prey,num_predators):
+	#receives imput from user
+	num_prey,num_predators = int(sys.argv[1]),int(sys.argv[2])
+
+	#construct the predators
+	predators = []
+	for i in range(num_predators):
+
+		obj = Predator()
+		obj.id = i
+
+		#keeps on the loop until it produces a animal that does not goes 
+		#out of bounds or colides with another animal
+		while True:
+
+			pos_x = np.random.randint(num_columns)
+			pos_y = np.random.randint(num_rows)
+			obj.position = (pos_x,pos_y)
+			obj.constroi_corpo()
+
+			flag_keep_on_loop = False
+
+			for bp in obj.body:
+
+				out_of_bounds = check_boundaries(bp,num_rows,num_columns)
+				print(out_of_bounds)
+
+				if not out_of_bounds:
+					colision = check_colision(bp,grid)
+
+				if out_of_bounds or colision:
+					flag_keep_on_loop = True
+					break
+
+			if not flag_keep_on_loop:
+				break
+
+		for bp in obj.body:
+			pos_x,pos_y = bp[0],bp[1]
+			grid[pos_y][pos_x] = 2
+
+		predators.append(obj)
+	return predators
+
+
 class Predator():
 	def __init__(self):
 		self.id = None
@@ -30,10 +84,10 @@ class Predator():
 
 	def constroi_corpo(self):
 		positions = np.empty([5])
-		up_left = (self.position[0]-1,self.position[1]+1)
+		down_right = (self.position[0]-1,self.position[1]+1)
 		down_left = (self.position[0]-1,self.position[1]-1)
 		up_right = (self.position[0]+1,self.position[1]+1)
-		down_right = (self.position[0]+1,self.position[1]-1)
+		up_left = (self.position[0]+1,self.position[1]-1)
 		self.body = [self.position,up_left,up_right,down_left,down_right]
 
 #inherits from Window class
@@ -62,29 +116,10 @@ class DangerZone(arcade.Window):
 
 		self.shape_list = arcade.ShapeElementList()
 
-		#receives imput from user
-		num_prey,num_predators = sys.argv[1],sys.argv[2]
+		num_preys,num_predators = sys.argv[1],sys.argv[2]
 
-		positions_predators = []
-		for i in range(int(sys.argv[2])):
-			pos_x = np.random.randint(num_columns)
-			pos_y = np.random.randint(num_rows)
-			positions_predators.append((pos_x,pos_y))
-
-		#construct the predators
-		predators = []
-		for i in range(len(positions_predators)):
-
-			obj = Predator()
-			obj.id = i
-			obj.position = positions_predators[i]
-			obj.constroi_corpo()
-
-			for bp in obj.body:
-				pos_x,pos_y = bp[0],bp[1]
-				self.grid[pos_x][pos_y] = 2
-
-			predators.append(obj)
+		#call function that populates the grid with preys and predators
+		populate_grid(self.grid,num_preys,num_predators)
 
 		#transverse grid to check state of each position
 		for i in range(num_rows):
@@ -104,10 +139,10 @@ class DangerZone(arcade.Window):
 		self.shape_list.draw()
 
 
-num_columns = 50
-num_rows = 30
-width_cell = 15
-heigth_cell = 15
+num_columns = 70
+num_rows = 50
+width_cell = 10
+heigth_cell = 10
 size_of_margin = 2
 
 screen_width = (width_cell + size_of_margin) * num_columns + size_of_margin
