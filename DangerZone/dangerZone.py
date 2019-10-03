@@ -33,7 +33,7 @@ class Predator():
 		up_left = (self.position[0]-1,self.position[1]+1)
 		down_left = (self.position[0]-1,self.position[1]-1)
 		up_right = (self.position[0]+1,self.position[1]+1)
-		down_right = (self.position[0]+1,self.position[1]+1)
+		down_right = (self.position[0]+1,self.position[1]-1)
 		self.body = [self.position,up_left,up_right,down_left,down_right]
 
 #inherits from Window class
