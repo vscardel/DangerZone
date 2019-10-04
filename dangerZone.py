@@ -12,13 +12,40 @@ def calculate_positions_of_grid(size_of_margin,width_cell,heigth_cell,num_rows,n
             #calculates position of current rectangle
             x = (size_of_margin + width_cell) * j + size_of_margin + width_cell // 2
             y = (size_of_margin + heigth_cell) * i + size_of_margin + heigth_cell // 2
-            positions[i][j] = (x,y)
+            positions[i][j] = [x,y]
     return positions
 
 def check_boundaries(pos,num_rows,num_columns):
 	if(pos[0] < 0 or pos[0] > num_columns - 1 or pos[1] < 0 or pos[1] > num_rows - 1 ):
 		return True
 	return False
+
+def pick_random_move():
+	moves = ['up','down','left','right']
+	moves = np.random.permutation(moves)
+	move = moves[0]
+	return move
+
+#receives a label that indicates if the animal is a prey or a predator
+def update_grid_position(grid,obj,move):
+
+	aux = obj.body[:]
+
+	if move == 'up':
+		for bp in aux:
+			bp[1] -= 1
+	elif move == 'down':
+		for bp in aux:
+			bp[1] += 1
+	elif move == 'right':
+		for bp in aux:
+			bp[0] += 1
+	elif move == 'left':
+		for bp in aux:
+			bp[0] -= 1
+
+	return aux
+
 
 #check if a given position is occupying the space of another
 def check_colision(pos,grid):
@@ -38,7 +65,7 @@ def create_safe_animal(obj,grid):
 
 		pos_x = np.random.randint(num_columns)
 		pos_y = np.random.randint(num_rows)
-		obj.position = (pos_x,pos_y)
+		obj.position = [pos_x,pos_y]
 		obj.constroi_corpo()
 
 		flag_keep_on_loop = False
@@ -46,6 +73,8 @@ def create_safe_animal(obj,grid):
 		for bp in obj.body:
 
 			out_of_bounds = check_boundaries(bp,num_rows,num_columns)
+
+			colision = False
 
 			if not out_of_bounds:
 				colision = check_colision(bp,grid)
@@ -102,10 +131,10 @@ class Predator():
 
 	def constroi_corpo(self):
 		positions = np.empty([5])
-		down_right = (self.position[0]-1,self.position[1]+1)
-		down_left = (self.position[0]-1,self.position[1]-1)
-		up_right = (self.position[0]+1,self.position[1]+1)
-		up_left = (self.position[0]+1,self.position[1]-1)
+		down_right = [self.position[0]-1,self.position[1]+1]
+		down_left = [self.position[0]-1,self.position[1]-1]
+		up_right = [self.position[0]+1,self.position[1]+1]
+		up_left = [self.position[0]+1,self.position[1]-1]
 		self.body = [self.position,up_left,up_right,down_left,down_right]
 
 class Prey():
@@ -119,10 +148,10 @@ class Prey():
 
 	def constroi_corpo(self):
 		positions = np.empty([5])
-		down = (self.position[0],self.position[1]+1)
-		up = (self.position[0],self.position[1]-1)
-		right = (self.position[0]+1,self.position[1])
-		left = (self.position[0]-1,self.position[1])
+		down = [self.position[0],self.position[1]+1]
+		up = [self.position[0],self.position[1]-1]
+		right = [self.position[0]+1,self.position[1]]
+		left = [self.position[0]-1,self.position[1]]
 		self.body = [self.position,down,up,left,right]
 
 
@@ -145,18 +174,21 @@ class DangerZone(arcade.Window):
 			row = [0]*num_columns
 			self.grid.append(row)
 
+		num_preys,num_predators = sys.argv[1],sys.argv[2]
+
+		#call function that populates the grid with preys and predators
+		predators,preys = populate_grid(self.grid,num_preys,num_predators)
+
+		self.predators,self.preys = predators,preys
+
 		arcade.set_background_color(arcade.color.BLACK)
+
 		#draw grid
 		self.recreate_grid()
 
 	def recreate_grid(self):
 
 		self.shape_list = arcade.ShapeElementList()
-
-		num_preys,num_predators = sys.argv[1],sys.argv[2]
-
-		#call function that populates the grid with preys and predators
-		predators,preys = populate_grid(self.grid,num_preys,num_predators)
 
 		#transverse grid to check state of each position
 		for i in range(num_rows):
@@ -165,7 +197,7 @@ class DangerZone(arcade.Window):
 					color = arcade.color.BLUE
 				elif self.grid[i][j] == 1:
 					color = arcade.color.GREEN
-				else:
+				elif self.grid[i][j] == 0:
 					color = arcade.color.WHITE
 				
 				x = self.positions[i][j][0]
@@ -177,6 +209,50 @@ class DangerZone(arcade.Window):
 		arcade.start_render()
 		self.shape_list.draw()
 
+	def update(self,delta_time):
+
+		new_positions_predators = []
+		pos = []
+
+		for predator in self.predators:
+			move = pick_random_move()
+			pos = update_grid_position(self.grid,predator,move)
+			for bp in pos:
+				if check_boundaries(bp,num_rows,num_columns):
+					new_positions_predators.append(predator.body)
+					break
+			new_positions_predators.append(pos)
+			new_positions_predators.append(predator.body)
+
+		new_positions_preys = []
+		pos = []
+
+		for prey in self.preys:
+			move = pick_random_move()
+			pos = update_grid_position(self.grid,prey,move)
+			for bp in pos:
+				if check_boundaries(bp,num_rows,num_columns):
+					new_positions_preys.append(prey.body)
+					break
+			new_positions_preys.append(pos)
+			
+		#clean grid
+		for i in range(num_rows):
+			for j in range(num_columns):
+				self.grid[i][j] = 0
+
+		#update positions of predators
+		for pos in new_positions_predators:
+			for bp in pos:
+				self.grid[bp[1]][bp[0]] = 2
+
+		#update positions of preys
+		for pos in new_positions_preys:
+			for bp in pos:
+				self.grid[bp[1]][bp[0]] = 1
+
+
+		self.recreate_grid()
 
 num_columns = 70
 num_rows = 50
