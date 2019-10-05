@@ -1,9 +1,10 @@
 import arcade
 import sys
+import copy
 import numpy as np
 
 #function that returns a list of the positions of each cell on the grid
-def calculate_positions_of_grid(size_of_margin,width_cell,heigth_cell,num_rows,num_columns):
+def calculate_positions_of_grid():
     #np grid that stores the positions
     positions = np.empty([num_rows,num_columns,2])
     for i in range(num_rows):
@@ -15,7 +16,7 @@ def calculate_positions_of_grid(size_of_margin,width_cell,heigth_cell,num_rows,n
             positions[i][j] = [x,y]
     return positions
 
-def check_boundaries(pos,num_rows,num_columns):
+def check_boundaries(pos):
 	if(pos[0] < 0 or pos[0] > num_columns - 1 or pos[1] < 0 or pos[1] > num_rows - 1 ):
 		return True
 	return False
@@ -29,7 +30,7 @@ def pick_random_move():
 #receives a label that indicates if the animal is a prey or a predator
 def update_grid_position(grid,obj,move):
 
-	aux = obj.body[:]
+	aux = copy.deepcopy(obj.body)
 
 	if move == 'up':
 		for bp in aux:
@@ -44,8 +45,13 @@ def update_grid_position(grid,obj,move):
 		for bp in aux:
 			bp[0] -= 1
 
-	return aux
-
+	out_of_bounds = False
+	for i in aux:
+		if check_boundaries(i):
+			out_of_bounds = True
+			break
+	if(not out_of_bounds):
+		obj.body = aux
 
 #check if a given position is occupying the space of another
 def check_colision(pos,grid):
@@ -72,7 +78,7 @@ def create_safe_animal(obj,grid):
 
 		for bp in obj.body:
 
-			out_of_bounds = check_boundaries(bp,num_rows,num_columns)
+			out_of_bounds = check_boundaries(bp)
 
 			colision = False
 
@@ -211,30 +217,13 @@ class DangerZone(arcade.Window):
 
 	def update(self,delta_time):
 
-		new_positions_predators = []
-		pos = []
-
 		for predator in self.predators:
 			move = pick_random_move()
-			pos = update_grid_position(self.grid,predator,move)
-			for bp in pos:
-				if check_boundaries(bp,num_rows,num_columns):
-					new_positions_predators.append(predator.body)
-					break
-			new_positions_predators.append(pos)
-			new_positions_predators.append(predator.body)
-
-		new_positions_preys = []
-		pos = []
-
+			update_grid_position(self.grid,predator,move)
+	
 		for prey in self.preys:
 			move = pick_random_move()
-			pos = update_grid_position(self.grid,prey,move)
-			for bp in pos:
-				if check_boundaries(bp,num_rows,num_columns):
-					new_positions_preys.append(prey.body)
-					break
-			new_positions_preys.append(pos)
+			update_grid_position(self.grid,prey,move)
 			
 		#clean grid
 		for i in range(num_rows):
@@ -242,15 +231,14 @@ class DangerZone(arcade.Window):
 				self.grid[i][j] = 0
 
 		#update positions of predators
-		for pos in new_positions_predators:
-			for bp in pos:
+		for predators in self.predators:
+			for bp in predators.body:
 				self.grid[bp[1]][bp[0]] = 2
 
 		#update positions of preys
-		for pos in new_positions_preys:
-			for bp in pos:
+		for prey in self.preys:
+			for bp in prey.body:
 				self.grid[bp[1]][bp[0]] = 1
-
 
 		self.recreate_grid()
 
@@ -263,7 +251,7 @@ size_of_margin = 2
 screen_width = (width_cell + size_of_margin) * num_columns + size_of_margin
 screen_heigth = (heigth_cell + size_of_margin) * num_rows + size_of_margin
 screen_title = "DangerZone"
-positions = calculate_positions_of_grid(size_of_margin,width_cell,heigth_cell,num_rows,num_columns)
+positions = calculate_positions_of_grid()
 
 def main():
     DangerZone(screen_width,screen_heigth,screen_title)
