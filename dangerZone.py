@@ -28,7 +28,7 @@ def pick_random_move():
 	return move
 
 #receives a label that indicates if the animal is a prey or a predator
-def update_grid_position(grid,obj,move):
+def update_grid_position(grid,obj,move,label):
 
 	aux = copy.deepcopy(obj.body)
 
@@ -45,13 +45,42 @@ def update_grid_position(grid,obj,move):
 		for bp in aux:
 			bp[0] -= 1
 
-	out_of_bounds = False
+	out_of_bounds,colision = False,False
+
 	for i in aux:
 		if check_boundaries(i):
 			out_of_bounds = True
 			break
+
 	if(not out_of_bounds):
-		obj.body = aux
+
+		#check for colision
+		for i in aux:
+
+			#prey colides with prey
+			if grid[i[1]][i[0]] == 1 and label == 1:
+				animal = Prey()
+				populate_grid(grid,1,0)
+				colision = True
+				break
+			
+
+		#clean grid
+		for i in obj.body:
+			grid[i[1]][i[0]] = 0
+
+		#if colides stay on the same position
+
+		#update positions
+		if not colision:
+
+			for i in aux:
+				if label == 1:
+					grid[i[1]][i[0]] = 1
+				else:
+					grid[i[1]][i[0]] = 2
+
+			obj.body = aux
 
 #check if a given position is occupying the space of another
 def check_colision(pos,grid):
@@ -93,9 +122,7 @@ def create_safe_animal(obj,grid):
 			break
 
 def populate_grid(grid,num_prey,num_predators):
-	#receives imput from user
-	num_prey,num_predators = int(sys.argv[1]),int(sys.argv[2])
-
+	
 	#construct the animals
 	predators = []
 	preys = []
@@ -180,10 +207,8 @@ class DangerZone(arcade.Window):
 			row = [0]*num_columns
 			self.grid.append(row)
 
-		num_preys,num_predators = sys.argv[1],sys.argv[2]
-
 		#call function that populates the grid with preys and predators
-		predators,preys = populate_grid(self.grid,num_preys,num_predators)
+		predators,preys = populate_grid(self.grid,num_prey,num_predators)
 
 		self.predators,self.preys = predators,preys
 
@@ -219,27 +244,12 @@ class DangerZone(arcade.Window):
 
 		for predator in self.predators:
 			move = pick_random_move()
-			update_grid_position(self.grid,predator,move)
+			update_grid_position(self.grid,predator,move,2)
 	
 		for prey in self.preys:
 			move = pick_random_move()
-			update_grid_position(self.grid,prey,move)
+			update_grid_position(self.grid,prey,move,1)
 			
-		#clean grid
-		for i in range(num_rows):
-			for j in range(num_columns):
-				self.grid[i][j] = 0
-
-		#update positions of predators
-		for predators in self.predators:
-			for bp in predators.body:
-				self.grid[bp[1]][bp[0]] = 2
-
-		#update positions of preys
-		for prey in self.preys:
-			for bp in prey.body:
-				self.grid[bp[1]][bp[0]] = 1
-
 		self.recreate_grid()
 
 num_columns = 70
@@ -247,6 +257,9 @@ num_rows = 50
 width_cell = 10
 heigth_cell = 10
 size_of_margin = 2
+
+#receives imput from user
+num_prey,num_predators = int(sys.argv[1]),int(sys.argv[2])
 
 screen_width = (width_cell + size_of_margin) * num_columns + size_of_margin
 screen_heigth = (heigth_cell + size_of_margin) * num_rows + size_of_margin
